@@ -21,7 +21,7 @@ class ReactPostprocessor(BasePostprocessor):
             activation_log = []
             net.eval()
             with torch.no_grad():
-                for batch in tqdm(id_loader_dict['val'],
+                for batch in tqdm(id_loader_dict['train'],
                                   desc='Setup: ',
                                   position=0,
                                   leave=True):
@@ -33,6 +33,7 @@ class ReactPostprocessor(BasePostprocessor):
 
             self.activation_log = np.concatenate(activation_log, axis=0)
             self.setup_flag = True
+            self.set_hyperparam()
         else:
             pass
 
@@ -44,8 +45,8 @@ class ReactPostprocessor(BasePostprocessor):
         energyconf = torch.logsumexp(output.data.cpu(), dim=1)
         return pred, energyconf
 
-    def set_hyperparam(self, hyperparam: list):
-        self.percentile = hyperparam[0]
+    def set_hyperparam(self):
+        self.percentile = 90
         self.threshold = np.percentile(self.activation_log.flatten(),
                                        self.percentile)
         print('Threshold at percentile {:2d} over id data is: {}'.format(
