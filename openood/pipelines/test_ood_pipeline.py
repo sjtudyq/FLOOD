@@ -90,6 +90,7 @@ class TestFLOODPipeline:
 
         # threshold based on train datasets
         data_loader = id_loader_dict['train']
+        postprocessor.setup(net, id_loader_dict, None)
         result = []
         with torch.no_grad():
             for batch in tqdm(data_loader,
