@@ -391,18 +391,16 @@ def train_net_vote(net_id, net, train_dataloader, test_dataloader, epochs, lr, a
                 else:
                     outliers = np.concatenate((outliers,mid.cpu().detach().numpy()))
         '''
-    train_acc, threshold, max_prob, avg_max = compute_accuracy(net, train_dataloader, calc=True, device=device)
+    train_acc, threshold= compute_accuracy(net, train_dataloader, calc=True, device=device)
     test_acc = compute_accuracy(net, test_dataloader, device=device)#, add=outliers)
     
     logger.info(threshold)
-    logger.info(max_prob)
-    logger.info(avg_max)
 
     logger.info('>> Training accuracy: %f' % train_acc)
     logger.info('>> Test accuracy: %f' % test_acc)
 
     logger.info(' ** Training complete **')
-    return threshold, max_prob, avg_max
+    return threshold
 
 
 def local_train_net_vote(nets, selected, args, net_dataidx_map, config, partition_folder_name, test_dl = None, device="cpu"):
@@ -433,8 +431,8 @@ def local_train_net_vote(nets, selected, args, net_dataidx_map, config, partitio
         elif args.dataset == 'tinyimagenet':
             num_class = 200
         
-        threshold, max_prob, avg_max = train_net_vote(net_id, net, train_dl_local, test_dl, n_epoch, args.lr, args.optimizer, sz, num_class=num_class, device=device)
-        threshold_list.append([float(threshold), float(max_prob), float(avg_max)])
+        threshold = train_net_vote(net_id, net, train_dl_local, test_dl, n_epoch, args.lr, args.optimizer, sz, num_class=num_class, device=device)
+        threshold_list.append(float(threshold))
        
     return threshold_list
 
@@ -542,13 +540,13 @@ if __name__ == '__main__':
             
             logger.info("Not Normalize")
             for accepted_vote in range(10, 11):
-                test_acc, half, pred_labels_list = compute_accuracy_vote_soft(model_list, threshold_list, test_dl_global, accepted_vote, normalize = False, factor=factor,device=device)
+                test_acc, half, pred_labels_list = compute_accuracy_vote_soft(model_list, threshold_list, test_dl_global, accepted_vote, normalize = True, factor=factor,device=device)
                 logger.info("Max {} vote: test acc = {}".format(accepted_vote, test_acc))
     else:
 
         # config.optimizer.num_epochs = 1
 
-        folder_name = "saved_model/%s_%s_%s_%s_%s/"%(args.dataset,args.partition,args.n_parties,args.init_seed, args.mark)
+        folder_name = "/ssd1/yufeng/saved_model/%s_%s_%s_%s_%s/"%(args.dataset,args.partition,args.n_parties,args.init_seed, args.mark)
         for net_id in range(args.n_parties):
             dataidxs = net_dataidx_map[net_id]
 
