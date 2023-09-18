@@ -673,6 +673,7 @@ def compute_accuracy(model, dataloader, get_confusion_matrix=False, calc=False, 
     flag = False
     ftrs = None
     lbs = None
+    score_list = []
     with torch.no_grad():
         for tmp in dataloader:
             for batch_idx, sample in enumerate(tmp):
@@ -692,20 +693,9 @@ def compute_accuracy(model, dataloader, get_confusion_matrix=False, calc=False, 
                 #     logger.info(prob)
                 #     logger.info(target)
                 if calc:
-                    if torch.max(prob[:,-1]) > max_prob:
-                        max_prob = torch.max(prob[:,-1])
+                    score = prob[:,-1]
+                    score_list.append(score)
 
-                    if torch.sum(torch.log(prob[:,-1])) > -10000:
-                        outlier_prob += torch.sum(torch.log(prob[:,-1]))
-                        num += x.shape[0]
-
-                    if torch.max(prob[:,-1]) > max_tmp:
-                        max_tmp = torch.max(prob[:,-1])
-
-                    if batch_idx % 4 == 0:
-                        avg_max += torch.log(max_tmp)
-                        avg_num += 1
-                        max_tmp = 0
                         
                 _, pred_label = torch.max(out.data, 1)
 
@@ -719,6 +709,8 @@ def compute_accuracy(model, dataloader, get_confusion_matrix=False, calc=False, 
                 else:
                     pred_labels_list = np.append(pred_labels_list, pred_label.cpu().numpy())
                     true_labels_list = np.append(true_labels_list, target.data.cpu().numpy())
+
+
     ''''
     if not calc:        
         ftrs = np.concatenate((ftrs,add))
@@ -739,7 +731,10 @@ def compute_accuracy(model, dataloader, get_confusion_matrix=False, calc=False, 
     #    return correct/float(total), conf_matrix
 
     if calc:
-        return correct/float(total), 1,1,1 #outlier_prob / num, torch.log(max_prob), avg_max / avg_num
+        score_all = torch.cat(score_list)
+        k = int(len(score_all)*0.05)
+        threshold_value, _ = torch.kthvalue(score_all, k)
+        return correct/float(total), threshold_value #outlier_prob / num, torch.log(max_prob), avg_max / avg_num
     else:
         return correct/float(total)
 
@@ -1033,13 +1028,14 @@ def compute_accuracy_vote_soft(model_list, threshold_list, dataloader, accepted_
         dataloader = [dataloader]
 
     out_total = [[] for i in range(1000)]
-    for model in model_list:
-        model.to(device)
+    for i in range(len(model_list)):
+        model = model_list[i].to(device)
         with torch.no_grad():
             for tmp in dataloader:
                 for batch_idx, sample in enumerate(tmp):
                     x, target = sample['data'].to(device), sample['label'].to(device)
-                    out_total[batch_idx].append(model(x).cpu())
+                    logits = model(x).cpu()
+                    out_total[batch_idx].append(logits)
         #logger.info(batch_idx)
         model.to('cpu')
 
@@ -1059,7 +1055,12 @@ def compute_accuracy_vote_soft(model_list, threshold_list, dataloader, accepted_
                     #out_del = torch.softmax(torch.Tensor(out_del), dim=1).numpy()
                     
                     #confidence = out_del[:,-1]
-                    out[i] = torch.softmax(out[i][:,:], dim=1).numpy()
+                    out[i] = torch.softmax(out[i][:,:], dim=1)
+                    if normalize:
+                        score = out[i][:,-1]
+                        mask = torch.where(score>threshold_list[i],1,0)
+                        out[i] = out[i] * mask.reshape(-1,1)
+                    
                     #saved = torch.softmax(out[i][:,:-1], dim=1).numpy()
                     #out[i] = out[i] / len(model_list)
 
@@ -1071,9 +1072,7 @@ def compute_accuracy_vote_soft(model_list, threshold_list, dataloader, accepted_
                 for ind in range(len(out[0])):
                     vote = [result[ind] for result in out]
                     vote = np.array(vote)
-                    index = np.argsort(vote[:,-1])
-                    sorted_vote = vote[index]
-                    final_vote = np.sum(sorted_vote[:accepted_vote, :-1], axis=0)
+                    final_vote = np.sum(vote[:, :-1], axis=0)
                     #probob = torch.softmax(torch.Tensor(final_vote), dim=0).tolist()
 
                     probob = (final_vote / np.sum(final_vote)).tolist()
