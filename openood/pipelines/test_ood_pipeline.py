@@ -124,6 +124,7 @@ class TestFLOODPipeline:
                 target = batch['label'].cuda()
                 pred, score = postprocessor.postprocess(net, data)
                 _, conf = MSPprocessor.postprocess(net, data)
+                conf = conf.cpu()
                 conf = torch.where(score.cpu()>threshold_value.cpu(), conf, 0)
                 result.append(dict({'pred':pred, 'conf':conf, 'target':target}))
 
