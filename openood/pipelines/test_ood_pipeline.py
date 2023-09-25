@@ -106,6 +106,10 @@ class TestFLOODPipeline:
         k = int(len(score_all)*0.05)
         threshold_value, _ = torch.kthvalue(score_all, k)
 
+        # mean = torch.mean(score_all)
+        # std = torch.std(score_all)
+        # threshold_value = mean - 3*std
+
         loss_avg = 0.0
         correct = 0
         data_loader = id_loader_dict['test']
@@ -120,7 +124,7 @@ class TestFLOODPipeline:
                 target = batch['label'].cuda()
                 pred, score = postprocessor.postprocess(net, data)
                 _, conf = MSPprocessor.postprocess(net, data)
-                conf = torch.where(score>threshold_value, conf, 0)
+                conf = torch.where(score.cpu()>threshold_value.cpu(), conf, 0)
                 result.append(dict({'pred':pred, 'conf':conf, 'target':target}))
 
         # print('\n', flush=True)
