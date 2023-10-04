@@ -693,7 +693,7 @@ def compute_accuracy(model, dataloader, get_confusion_matrix=False, calc=False, 
                 #     logger.info(prob)
                 #     logger.info(target)
                 if calc:
-                    score = prob[:,-1]
+                    score = -prob[:,-1]
                     score_list.append(score)
 
                         
@@ -1057,7 +1057,7 @@ def compute_accuracy_vote_soft(model_list, threshold_list, dataloader, accepted_
                     #confidence = out_del[:,-1]
                     out[i] = torch.softmax(out[i][:,:], dim=1)
                     if normalize:
-                        score = out[i][:,-1]
+                        score = -out[i][:,-1]
                         mask = torch.where(score>threshold_list[i],1,0)
                         out[i] = out[i] * mask.reshape(-1,1)
                     
