@@ -312,41 +312,43 @@ def train_net_vote(net_id, net, train_dataloader, test_dataloader, epochs, lr, a
             x_gen11.requires_grad = True
 
             # For MNIST:
-            # out, mid = net(x, return_feature=True) 
-         
-            # out_gen11 = net(x_gen11)
+            if args.dataset == "mnist":
+                out, mid = net(x, return_feature=True) 
             
-            # one_hot = torch.zeros(out.cpu().shape[0], out.cpu().shape[1]).scatter_(1, target.cpu().reshape(-1, 1), 1)
-            # one_hot = one_hot.to(device)
-            # out_second = out - one_hot * 10000
+                out_gen11 = net(x_gen11)
+                
+                one_hot = torch.zeros(out.cpu().shape[0], out.cpu().shape[1]).scatter_(1, target.cpu().reshape(-1, 1), 1)
+                one_hot = one_hot.to(device)
+                out_second = out - one_hot * 10000
 
-            # ind = np.arange(x.shape[0])
-            # np.random.shuffle(ind)
-            # y_mask = np.arange(x.shape[0])
-            # labels = target.cpu().numpy()
-            # y_mask = np.where(labels[y_mask] == labels[ind[y_mask]], 11, 10)
-            
-            # loss = criterion(out, target) + criterion(out_gen11, y_gen) + criterion(out_second, y_gen) 
+                ind = np.arange(x.shape[0])
+                np.random.shuffle(ind)
+                y_mask = np.arange(x.shape[0])
+                labels = target.cpu().numpy()
+                y_mask = np.where(labels[y_mask] == labels[ind[y_mask]], 11, 10)
+                
+                loss = criterion(out, target) + criterion(out_gen11, y_gen) + criterion(out_second, y_gen) 
 
-            # if np.min(y_mask) == 10:                    
-            #     y_mask = torch.LongTensor(y_mask).to(device)
+                if np.min(y_mask) == 10:                    
+                    y_mask = torch.LongTensor(y_mask).to(device)
 
-            #     beta=torch.distributions.beta.Beta(1, 1).sample([]).item()
-            #     mixed_embeddings = beta * mid + (1-beta) * mid[ind]
-            #     mixed_out = net.later_layers(mixed_embeddings) 
-            #     loss += criterion(mixed_out, y_mask) * 0.01
-            
-            # adv_data = attack.perturb(x_gen11, y_gen)
+                    beta=torch.distributions.beta.Beta(1, 1).sample([]).item()
+                    mixed_embeddings = beta * mid + (1-beta) * mid[ind]
+                    mixed_out = net.later_layers(mixed_embeddings) 
+                    loss += criterion(mixed_out, y_mask) * 0.01
+                
+                adv_data = attack.perturb(x_gen11, y_gen)
 
-            # out_adv = net(adv_data)
+                out_adv = net(adv_data)
 
-            # loss += criterion(out_adv, y_gen)
+                loss += criterion(out_adv, y_gen)
+            else:
 
-            # For CIFAR-10 and CIFAR-100, ResNet:
-            x_con = torch.cat([x,x_gen11],dim=0)
-            y_con = torch.cat([target,y_gen],dim=0)
-            out = net(x_con)
-            loss = criterion(out, y_con)
+                # For CIFAR-10 and CIFAR-100, ResNet:
+                x_con = torch.cat([x,x_gen11],dim=0)
+                y_con = torch.cat([target,y_gen],dim=0)
+                out = net(x_con)
+                loss = criterion(out, y_con)
 
             loss.backward()
             optimizer.step()
