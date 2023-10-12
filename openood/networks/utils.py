@@ -30,7 +30,7 @@ from .resnet18_64x64 import ResNet18_64x64
 from .resnet18_224x224 import ResNet18_224x224
 from .resnet18_256x256 import ResNet18_256x256
 from .resnet50 import ResNet50
-from .rot_net import RotNet
+from .rot_net import RotNet, FedOVRotNet
 from .udg_net import UDGNet
 from .vit_b_16 import ViT_B_16
 from .wrn import WideResNet
