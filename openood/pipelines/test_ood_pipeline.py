@@ -101,6 +101,8 @@ class TestFLOODPipeline:
                 data = batch['data'].cuda()
                 target = batch['label'].cuda()
                 pred, score = postprocessor.postprocess(net, data)
+                # FedOV+RotPred
+                # pred, score, conf = postprocessor.postprocess(net, data)
                 result.append(score)
         score_all = torch.cat(result)
         k = int(len(score_all)*0.05)
@@ -124,6 +126,8 @@ class TestFLOODPipeline:
                 target = batch['label'].cuda()
                 pred, score = postprocessor.postprocess(net, data)
                 _, conf = MSPprocessor.postprocess(net, data)
+                # FedOV+RotPred
+                # pred, score, conf = postprocessor.postprocess(net, data)
                 conf = conf.cpu()
                 conf = torch.where(score.cpu()>threshold_value.cpu(), conf, 0)
                 result.append(dict({'pred':pred, 'conf':conf, 'target':target}))
