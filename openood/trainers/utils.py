@@ -28,7 +28,7 @@ from .sae_trainer import SAETrainer
 from .udg_trainer import UDGTrainer
 from .vos_trainer import VOSTrainer
 from .rts_trainer import RTSTrainer
-from .rotpred_trainer import RotPredTrainer
+from .rotpred_trainer import RotPredTrainer, FedOVRotPredTrainer
 from .regmixup_trainer import RegMixupTrainer
 from .mixoe_trainer import MixOETrainer
 
@@ -63,7 +63,8 @@ def get_trainer(net, train_loader: DataLoader, val_loader: DataLoader,
             'logitnorm': LogitNormTrainer,
             'rd4ad': Rd4adTrainer,
             'rts': RTSTrainer,
-            'rotpred': RotPredTrainer
+            'rotpred': RotPredTrainer,
+            'fedov+rotpred': FedOVRotPredTrainer
         }
         if config.trainer.name in ['cider', 'npos']:
             return trainers[config.trainer.name](net, train_loader, val_loader,
