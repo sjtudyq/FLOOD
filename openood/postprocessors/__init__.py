@@ -34,6 +34,6 @@ from .she_postprocessor import SHEPostprocessor
 from .temp_scaling_postprocessor import TemperatureScalingPostprocessor
 from .utils import get_postprocessor
 from .vim_postprocessor import VIMPostprocessor
-from .rotpred_postprocessor import RotPredPostprocessor
+from .rotpred_postprocessor import RotPredPostprocessor, FedOVRotPredPostprocessor
 from .rankfeat_postprocessor import RankFeatPostprocessor
 from .gen_postprocessor import GENPostprocessor
