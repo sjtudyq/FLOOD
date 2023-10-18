@@ -548,7 +548,7 @@ if __name__ == '__main__':
 
         # config.optimizer.num_epochs = 1
 
-        folder_name = "/ssd1/yufeng/saved_model/%s_%s_%s_%s_%s/"%(args.dataset,args.partition,args.n_parties,args.init_seed, args.mark)
+        folder_name = "saved_model/%s_%s_%s_%s_%s_%s/"%(args.dataset,args.partition,args.beta,args.n_parties,args.init_seed, args.mark)
         for net_id in range(args.n_parties):
             dataidxs = net_dataidx_map[net_id]
 
