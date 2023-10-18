@@ -583,6 +583,7 @@ if __name__ == '__main__':
         from openood.pipelines.test_ood_pipeline import TestFLOODPipeline
         total_result = []
         for net_id in range(args.n_parties):
+            config.dataset['train'].imglist_pth = '%s%d.txt'%(partition_folder_name,net_id)
             test_pipeline = TestFLOODPipeline(config)
             result = test_pipeline.run(model_list[net_id])
             total_result.append(result)
