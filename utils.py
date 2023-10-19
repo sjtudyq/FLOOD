@@ -23,7 +23,6 @@ import torchvision.utils as vutils
 import time
 import random
 
-from models.mnist_model import Generator, Discriminator, DHead, QHead
 from config import params
 import sklearn.datasets as sk
 from sklearn.datasets import load_svmlight_file
