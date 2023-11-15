@@ -1,4 +1,6 @@
-# FLOOD (FL+OOD): Open-Set Learning is All You Need for One-Shot Federated Ensemble
+# FLOOD (FL+OOD)
+
+The code for **Open-Set Learning in One-Shot Federated Ensemble: Theoretical Analysis and Experimental Studies**
 
 ## Usage
 
