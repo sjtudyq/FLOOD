@@ -50,7 +50,7 @@ class VIMPostprocessor(BasePostprocessor):
                                    axis=-1)
             self.alpha = logit_id_train.max(
                 axis=-1).mean() / vlogit_id_train.mean()
-            print(f'{self.alpha=:.4f}')
+            # print(f'{self.alpha=:.4f}')
 
             self.setup_flag = True
         else:
