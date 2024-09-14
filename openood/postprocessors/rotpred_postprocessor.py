@@ -87,16 +87,16 @@ class FedOVRotPredPostprocessor(BasePostprocessor):
             3 * torch.ones(batch_size),
         ]).long().cuda()
 
-        logits, logits_rot, logits_known = net(x_rot, return_rot_logits=True)
+        logits, logits_rot = net(x_rot, return_rot_logits=True)
         logits = logits[:batch_size]
-        prob = torch.max(torch.softmax(logits,dim=1),dim=1)[0]
-        preds = logits.argmax(1)
+        prob = torch.max(torch.softmax(logits[:,:-1],dim=1),dim=1)[0]
+        preds = logits[:,:-1].argmax(1)
 
         # https://github.com/hendrycks/ss-ood/blob/8051356592a152614ab7251fd15084dd86eb9104/multiclass_ood/test_auxiliary_ood.py#L177-L208
         num_classes = logits.shape[1]
-        uniform_dist = torch.ones_like(logits) / num_classes
+        # uniform_dist = torch.ones_like(logits) / num_classes
         # cls_loss = kl_div(uniform_dist, F.softmax(logits, dim=1))
-        cls_loss = F.softmax(logits_known[:batch_size], dim=1)[:,1]
+        cls_loss = - F.softmax(logits[:batch_size], dim=1)[:,-1]
 
         rot_one_hot = torch.zeros_like(logits_rot).scatter_(
             1,
@@ -117,6 +117,6 @@ class FedOVRotPredPostprocessor(BasePostprocessor):
 
         # here ID samples will yield larger scores
         scores = cls_loss - total_rot_loss
-        return preds, scores, cls_loss*prob
+        return preds, scores
 
 

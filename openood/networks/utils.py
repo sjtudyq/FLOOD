@@ -313,6 +313,18 @@ def get_network(network_config):
         backbone.fc = nn.Identity()
 
         net = RotNet(backbone=backbone, num_classes=num_classes)
+    
+    elif network_config.name == 'fedadav_net':
+        # don't wrap ddp here cuz we need to modify
+        # backbone
+        network_config.backbone.num_gpus = 1
+        backbone = get_network(network_config.backbone)
+        feature_size = backbone.feature_size
+        # remove fc otherwise ddp will
+        # report unused params
+        backbone.fc = nn.Identity()
+
+        net = FedOVRotNet(backbone=backbone, num_classes=num_classes)
 
     elif network_config.name == 'dsvdd':
         net = build_network(network_config.type)

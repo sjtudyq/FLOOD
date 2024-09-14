@@ -31,7 +31,7 @@ from .rd4ad_postprocessor import Rd4adPostprocessor
 from .react_postprocessor import ReactPostprocessor
 from .rmds_postprocessor import RMDSPostprocessor
 from .residual_postprocessor import ResidualPostprocessor
-from .rotpred_postprocessor import RotPredPostprocessor
+from .rotpred_postprocessor import RotPredPostprocessor, FedOVRotPredPostprocessor
 from .rankfeat_postprocessor import RankFeatPostprocessor
 from .ssd_postprocessor import SSDPostprocessor
 from .she_postprocessor import SHEPostprocessor
@@ -81,7 +81,8 @@ def get_postprocessor(config: Config):
         'rts': RTSPostprocessor,
         'rotpred': RotPredPostprocessor,
         'rankfeat': RankFeatPostprocessor,
-        'gen': GENPostprocessor
+        'gen': GENPostprocessor,
+        'fedadav': FedOVRotPredPostprocessor
     }
 
     return postprocessors[config.postprocessor.name](config)

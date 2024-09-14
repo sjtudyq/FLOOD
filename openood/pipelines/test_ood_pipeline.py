@@ -126,6 +126,8 @@ class TestFLOODPipeline:
                 target = batch['label'].cuda()
                 pred, score = postprocessor.postprocess(net, data)
                 _, conf = MSPprocessor.postprocess(net, data)
+                conf[pred != _] = 0
+                
                 # FedOV+RotPred
                 # pred, score, conf = postprocessor.postprocess(net, data)
                 conf = conf.cpu()

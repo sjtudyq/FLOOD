@@ -7,10 +7,13 @@ from tqdm import tqdm
 
 import openood.utils.comm as comm
 from openood.utils import Config
+import torchvision.transforms as transforms
 
 from .lr_scheduler import cosine_annealing
 import copy
 import random
+from attack import *
+
 
 class RotPredTrainer:
     def __init__(self, net: nn.Module, train_loader: DataLoader,
@@ -154,6 +157,41 @@ def blur(x):
     
     return func(x)
 
+def adaptive_cross_entropy_loss(output, target):
+    """
+    Custom Cross Entropy Loss with adaptive weighting for the 'unknown' class.
+    Args:
+    - output: Model predictions (logits) of shape (batch_size, num_classes)
+    - target: Ground truth labels of shape (batch_size)
+    
+    The last class (#num_classes) is considered 'unknown', and its weight is set 
+    based on the number of unique classes in the current batch.
+    """
+    batch_size, num_classes = output.size()
+
+    # Get the unique classes in the batch (target)
+    unique_classes_in_batch = torch.unique(target)
+
+    # Count the number of unique classes in the batch
+    num_classes_in_batch = len(unique_classes_in_batch)
+
+    # Initialize weights as ones
+    weights = torch.ones(num_classes)
+
+    # Set the weight of the 'unknown' class (last class) as 1/num_classes_in_batch
+    weights[-1] = 1.0 / num_classes_in_batch
+
+    # Move weights to the same device as output
+    weights = weights.to(output.device)
+
+    # Define the cross-entropy loss with the adaptive weights
+    criterion = nn.CrossEntropyLoss(weight=weights).to(output.device)
+
+    # Compute the loss
+    loss = criterion(output, target)
+    
+    return loss
+
 class FedOVRotPredTrainer:
     def __init__(self, net: nn.Module, train_loader: DataLoader,
                  config: Config) -> None:
@@ -180,10 +218,24 @@ class FedOVRotPredTrainer:
             ),
         )
 
+        self.check_epoch = 50
+
+        self.attack = FastGradientSignUntargeted(self.net, 
+                                        epsilon=0.5, 
+                                        alpha=0.002, 
+                                        min_val=0, 
+                                        max_val=1, 
+                                        max_iters=5,
+                                        device="cuda:0")
+
         #self.use_rotpred = True
 
     def train_epoch(self, epoch_idx):
         self.net.train()
+
+        num_class = 10
+        if (self.config.dataset.name=="cifar100"):
+            num_class = 100
 
         loss_avg = 0.0
         loss_known_avg = 0.0
@@ -222,6 +274,8 @@ class FedOVRotPredTrainer:
             target = batch['label'].cuda()
 
             batch_size = len(data)
+            y_gen = np.ones(data.shape[0]) * num_class
+            y_gen = torch.LongTensor(y_gen).cuda()
             
             # y_gen = torch.cat([
             #     torch.ones(batch_size),
@@ -247,7 +301,7 @@ class FedOVRotPredTrainer:
             x_180 = torch.rot90(data, 2, [2, 3])
             x_270 = torch.rot90(data, 3, [2, 3])
 
-            x_rot = torch.cat([data, x_90, x_180, x_270, x_gen])
+            x_rot = torch.cat([data, x_90, x_180, x_270])
             y_rot = torch.cat([
                 torch.zeros(batch_size),
                 torch.ones(batch_size),
@@ -255,17 +309,27 @@ class FedOVRotPredTrainer:
                 3 * torch.ones(batch_size),
             ]).long().cuda()
 
+            x_con = torch.cat([data, x_gen])
+            y_con = torch.cat([target,y_gen])
+
+            if self.config.dataset.name == "mnist":
+                adv_data = self.attack.perturb(x_gen, y_gen)
+                x_con = torch.cat([x_con, adv_data])
+                y_con = torch.cat([y_con, y_gen])
+                
+
             # forward
-            logits, logits_rot, logits_known = self.net(x_rot, return_rot_logits=True)
-            loss_cls = F.cross_entropy(logits[:batch_size], target)
+            logits, logits_rot = self.net(x_rot, return_rot_logits=True)
+            loss_cls = adaptive_cross_entropy_loss(self.net(x_con), y_con)
             if self.net.use_rotpred:
-                loss_rot = F.cross_entropy(logits_rot[:batch_size*4], y_rot)
+                loss_rot = F.cross_entropy(logits_rot, y_rot)
             else:
                 loss_rot = 0
-            loss_known = F.cross_entropy(logits_known[:batch_size], torch.ones(batch_size).long().cuda()) + F.cross_entropy(logits_known[-batch_size:], torch.zeros(batch_size).long().cuda())
+
+            loss = loss_cls
             
-            loss = loss_cls + loss_known
-            # if epoch_idx == 100:
+
+            # if epoch_idx == self.check_epoch:
             #     loss_rot_item = F.cross_entropy(logits_rot[:batch_size*4], y_rot, reduce=False).detach().cpu()
             #     loss_rot_item_whole = (loss_rot_item[:batch_size]+loss_rot_item[batch_size:batch_size*2]+loss_rot_item[batch_size*2:batch_size*3]+loss_rot_item[batch_size*3:])/4
             #     loss_rot_total.append(loss_rot_item_whole)
@@ -274,7 +338,7 @@ class FedOVRotPredTrainer:
                 loss += loss_rot
 
             # backward
-            if epoch_idx != 100:
+            if epoch_idx != self.check_epoch:
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
@@ -284,22 +348,19 @@ class FedOVRotPredTrainer:
             with torch.no_grad():
                 loss_avg = loss_avg * 0.8 + float(loss) * 0.2
                 loss_rot_avg = loss_rot_avg * 0.8 + float(loss_rot) * 0.2
-                loss_known_avg = loss_known_avg * 0.8 + float(loss_known) * 0.2
 
         # comm.synchronize()
 
         metrics = {}
         metrics['epoch_idx'] = epoch_idx
         metrics['loss'] = self.save_metrics(loss_avg)
-        metrics['cls'] = loss_avg - loss_rot_avg - loss_known_avg
         metrics['rot'] = loss_rot_avg
-        metrics['known'] = loss_known_avg
-        if epoch_idx == 100:
+        if epoch_idx == self.check_epoch:
             # loss_rot_total = torch.cat(loss_rot_total)
             # k = int(len(loss_rot_total)*0.95)
             # threshold_value, _ = torch.kthvalue(loss_rot_total, k)
             # print(threshold_value)
-            if loss_avg - loss_known_avg > 0.5:
+            if loss_rot_avg > 0.5:
                 self.net.use_rotpred = False
 
         return self.net, metrics

@@ -64,7 +64,7 @@ def get_trainer(net, train_loader: DataLoader, val_loader: DataLoader,
             'rd4ad': Rd4adTrainer,
             'rts': RTSTrainer,
             'rotpred': RotPredTrainer,
-            'fedov+rotpred': FedOVRotPredTrainer
+            'fedadav': FedOVRotPredTrainer
         }
         if config.trainer.name in ['cider', 'npos']:
             return trainers[config.trainer.name](net, train_loader, val_loader,
