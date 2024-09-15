@@ -111,7 +111,7 @@ class FedOVRotPredPostprocessor(BasePostprocessor):
 
         if net.use_rotpred:
             total_rot_loss = (rot_0_loss + rot_90_loss + rot_180_loss + rot_270_loss) / 4.0
-            total_rot_loss = torch.where(total_rot_loss>0.5,0.5,total_rot_loss)
+            # total_rot_loss = torch.where(total_rot_loss>0.5,0.5,total_rot_loss)
         else:
             total_rot_loss = 0
 
