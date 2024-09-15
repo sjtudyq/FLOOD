@@ -178,8 +178,8 @@ def adaptive_cross_entropy_loss(output, target):
     # Initialize weights as ones
     weights = torch.ones(num_classes)
 
-    # Set the weight of the 'unknown' class (last class) as 1/num_classes_in_batch
-    weights[-1] = 1.0 / num_classes_in_batch
+    # Set the weight of the 'unknown' class (last class) as 2/num_classes_in_batch
+    weights[-1] = 2.0 / num_classes_in_batch
 
     # Move weights to the same device as output
     weights = weights.to(output.device)
