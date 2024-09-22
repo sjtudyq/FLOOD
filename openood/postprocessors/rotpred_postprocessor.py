@@ -67,6 +67,7 @@ class FedOVRotPredPostprocessor(BasePostprocessor):
     @torch.no_grad()
     def postprocess(self, net: nn.Module, data: Any):
         batch_size = len(data)
+        net.cuda(1)
 
         # x_90 = copy.deepcopy(data)
         # x_180 = copy.deepcopy(data)
