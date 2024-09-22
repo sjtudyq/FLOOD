@@ -98,15 +98,27 @@ class TestFLOODPipeline:
                               position=0,
                               leave=True):
                 # prepare data
-                data = batch['data'].cuda()
-                target = batch['label'].cuda()
-                pred, score = postprocessor.postprocess(net, data)
-                # FedOV+RotPred
-                # pred, score, conf = postprocessor.postprocess(net, data)
+                data = batch['data'].cuda(1)
+                target = batch['label'].cuda(1)
+                if self.config.postprocessor.name == 'fedadav':
+                    # FedOV+RotPred
+                    pred, score, conf = postprocessor.postprocess(net, data)
+                else:
+                    pred, score = postprocessor.postprocess(net, data)
+                
                 result.append(score)
         score_all = torch.cat(result)
-        k = int(len(score_all)*0.05)
-        threshold_value, _ = torch.kthvalue(score_all, k)
+        if self.config.postprocessor.name == 'fedadav':
+            k = int(len(score_all)*0.2)
+            threshold_value, _ = torch.kthvalue(score_all, k)
+            print(threshold_value)
+            if (threshold_value<-2):
+                net.use_rotpred = False
+        else:
+            k = int(len(score_all)*0.05)
+            threshold_value, _ = torch.kthvalue(score_all, k)
+        print(threshold_value)
+        print(net.use_rotpred)
 
         # mean = torch.mean(score_all)
         # std = torch.std(score_all)
@@ -122,16 +134,19 @@ class TestFLOODPipeline:
                               position=0,
                               leave=True):
                 # prepare data
-                data = batch['data'].cuda()
-                target = batch['label'].cuda()
-                pred, score = postprocessor.postprocess(net, data)
-                _, conf = MSPprocessor.postprocess(net, data)
-                conf[pred != _] = 0
+                data = batch['data'].cuda(1)
+                target = batch['label'].cuda(1)
+                # conf[pred != _] = 0
                 
-                # FedOV+RotPred
-                # pred, score, conf = postprocessor.postprocess(net, data)
+                if self.config.postprocessor.name == 'fedadav':
+                    # FedOV+RotPred
+                    pred, score, conf = postprocessor.postprocess(net, data)
+                else:
+                    pred, score = postprocessor.postprocess(net, data)
+                    _, conf = MSPprocessor.postprocess(net, data)
+
                 conf = conf.cpu()
-                conf = torch.where(score.cpu()>threshold_value.cpu(), conf, 0)
+                conf = torch.where(score.cpu()>=threshold_value.cpu(), conf, 0)
                 result.append(dict({'pred':pred, 'conf':conf, 'target':target}))
 
         # print('\n', flush=True)
