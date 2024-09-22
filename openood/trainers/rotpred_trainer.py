@@ -198,6 +198,7 @@ class FedOVRotPredTrainer:
 
     def train_epoch(self, epoch_idx):
         self.net.train()
+        self.net.cuda(1)
 
         num_class = 10
         if (self.config.dataset.name=="cifar100"):
