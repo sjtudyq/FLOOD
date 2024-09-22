@@ -34,7 +34,7 @@ class RotPredPostprocessor(BasePostprocessor):
             torch.ones(batch_size),
             2 * torch.ones(batch_size),
             3 * torch.ones(batch_size),
-        ]).long().cuda()
+        ]).long().cuda(1)
 
         logits, logits_rot = net(x_rot, return_rot_logits=True)
         logits = logits[:batch_size]
@@ -47,7 +47,7 @@ class RotPredPostprocessor(BasePostprocessor):
 
         rot_one_hot = torch.zeros_like(logits_rot).scatter_(
             1,
-            y_rot.unsqueeze(1).cuda(), 1)
+            y_rot.unsqueeze(1).cuda(1), 1)
         rot_loss = kl_div(rot_one_hot, F.softmax(logits_rot, dim=1))
         rot_0_loss, rot_90_loss, rot_180_loss, rot_270_loss = torch.chunk(
             rot_loss, 4, dim=0)
@@ -85,22 +85,22 @@ class FedOVRotPredPostprocessor(BasePostprocessor):
             torch.ones(batch_size),
             2 * torch.ones(batch_size),
             3 * torch.ones(batch_size),
-        ]).long().cuda()
+        ]).long().cuda(1)
 
         logits, logits_rot = net(x_rot, return_rot_logits=True)
         logits = logits[:batch_size]
-        prob = torch.max(torch.softmax(logits[:,:-1],dim=1),dim=1)[0]
+        prob = torch.max(torch.softmax(logits,dim=1)[:,:-1],dim=1)[0]
         preds = logits[:,:-1].argmax(1)
 
         # https://github.com/hendrycks/ss-ood/blob/8051356592a152614ab7251fd15084dd86eb9104/multiclass_ood/test_auxiliary_ood.py#L177-L208
-        num_classes = logits.shape[1]
+        # num_classes = logits.shape[1]
         # uniform_dist = torch.ones_like(logits) / num_classes
         # cls_loss = kl_div(uniform_dist, F.softmax(logits, dim=1))
-        cls_loss = - F.softmax(logits[:batch_size], dim=1)[:,-1]
+        # cls_loss = F.softmax(logits_known[:batch_size], dim=1)[:,1]
 
         rot_one_hot = torch.zeros_like(logits_rot).scatter_(
             1,
-            y_rot.unsqueeze(1).cuda(), 1)
+            y_rot.unsqueeze(1).cuda(1), 1)
         rot_loss = kl_div(rot_one_hot, F.softmax(logits_rot, dim=1))
         rot_0_loss, rot_90_loss, rot_180_loss, rot_270_loss = torch.chunk(
             rot_loss, 4, dim=0)
@@ -111,12 +111,12 @@ class FedOVRotPredPostprocessor(BasePostprocessor):
 
         if net.use_rotpred:
             total_rot_loss = (rot_0_loss + rot_90_loss + rot_180_loss + rot_270_loss) / 4.0
-            # total_rot_loss = torch.where(total_rot_loss>0.5,0.5,total_rot_loss)
+            total_rot_loss = torch.where(total_rot_loss>0.7,10,total_rot_loss) # reject those without correct rotation predictions
         else:
             total_rot_loss = 0
 
         # here ID samples will yield larger scores
-        scores = cls_loss - total_rot_loss
-        return preds, scores
+        scores = prob - total_rot_loss
+        return preds, scores, prob
 
 
