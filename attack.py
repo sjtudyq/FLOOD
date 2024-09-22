@@ -66,7 +66,7 @@ class FastGradientSignUntargeted():
         self._type = _type
         self.device = device
         
-    def perturb(self, original_images, labels, reduction4loss='mean', random_start=False):
+    def perturb(self, original_images, labels, reduction4loss='mean', random_start=False, get_known_digits=False):
         # original_images: values are within self.min_val and self.max_val
 
         # The adversaries created from random close points to the original data
@@ -89,7 +89,10 @@ class FastGradientSignUntargeted():
 
         with torch.enable_grad():
             for _iter in range(self.max_iters):
-                outputs = self.model(x, _eval=True)
+                if get_known_digits: # for FedAdav model
+                    _, _, outputs = self.model(x, return_rot_logits=True)
+                else:
+                    outputs = self.model(x)
 
                 loss = F.cross_entropy(outputs, labels).to(self.device)
 
