@@ -109,7 +109,7 @@ class TestFLOODPipeline:
                 result.append(score)
         score_all = torch.cat(result)
         if self.config.postprocessor.name == 'fedadav':
-            k = int(len(score_all)*0.02)
+            k = int(len(score_all)*0.2)
             threshold_value, _ = torch.kthvalue(score_all, k)
             print(threshold_value)
             if (threshold_value<-2):
