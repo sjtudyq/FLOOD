@@ -542,7 +542,7 @@ if __name__ == '__main__':
             
             logger.info("Not Normalize")
             for accepted_vote in range(10, 11):
-                test_acc, half, pred_labels_list = compute_accuracy_vote_soft(model_list, threshold_list, test_dl_global, accepted_vote, normalize = True, factor=factor,device=device)
+                test_acc, half, pred_labels_list = compute_accuracy_vote_soft(model_list, threshold_list, test_dl_global, accepted_vote, normalize = False, factor=factor,device=device)
                 logger.info("Max {} vote: test acc = {}".format(accepted_vote, test_acc))
     else:
 
