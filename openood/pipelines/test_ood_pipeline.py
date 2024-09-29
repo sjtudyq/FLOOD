@@ -117,8 +117,6 @@ class TestFLOODPipeline:
         else:
             k = int(len(score_all)*0.05)
             threshold_value, _ = torch.kthvalue(score_all, k)
-        print(threshold_value)
-        print(net.use_rotpred)
 
         # mean = torch.mean(score_all)
         # std = torch.std(score_all)
